@@ -42,6 +42,8 @@ def extract_text_from_image(image_path: str) -> str:
         logger.error(f"Error extracting text: {str(e)}")
         raise Exception(f"ไม่สามารถอ่านข้อความจากรูปได้: {str(e)}")
 
+
+# ต้องแก้
 def parse_payment_slip(text: str) -> Dict[str, Any]:
     """
     แยกข้อมูลสลิปเงินจากข้อความ
@@ -66,15 +68,13 @@ def parse_payment_slip(text: str) -> Dict[str, Any]:
         }
         
         # แยกจำนวนเงิน - ปรับปรุงให้จับได้ดีขึ้น
-        amount_patterns = [
-            r'([0-9,]+\.?[0-9]*)\s*บาท',
-            r'([0-9,]+\.?[0-9]*)\s*THB',
-            r'จำนวนเงิน[:\s]*([0-9,]+\.?[0-9]*)',
-            r'Amount[:\s]*([0-9,]+\.?[0-9]*)',
-            r'฿([0-9,]+\.?[0-9]*)',
-            r'^\s*([0-9,]+\.?[0-9]*)\s*$'  # เลขที่อยู่คนเดียวในบรรทัด
-        ]
-        
+        amount_patterns = [r'(?:จำนวนเงิน|Amount)\s([\d,]+.\d{2})', r'([\d,]+.\d{2})\s(?:บาท|BAHT)']
+        for pattern in amount_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                parsed_data["amount"] = match.group(1).replace(',', '')
+                break
+                       
         # หาจำนวนเงินจากทุกบรรทัด
         lines = text.split('\n')
         for line in lines:
@@ -83,14 +83,17 @@ def parse_payment_slip(text: str) -> Dict[str, Any]:
                 match = re.search(pattern, line, re.IGNORECASE)
                 if match:
                     amount_candidate = match.group(1).replace(',', '')
-                    # ตรวจสอบว่าเป็นตัวเลขที่สมเหตุสมผล (มากกว่า 0)
-                    try:
-                        amount_num = float(amount_candidate)
-                        if amount_num > 0:
-                            parsed_data["amount"] = amount_candidate
-                            break
-                    except:
-                        continue
+                    # ดึงเฉพาะตัวเลขทศนิยม (เช่น 1234.56)
+                    decimal_match = re.search(r"\d+(?:\.\d+)?", amount_candidate)
+                    if decimal_match:
+                        amount_decimal = decimal_match.group()
+                        try:
+                            amount_num = float(amount_decimal)
+                            if amount_num > 0:
+                                parsed_data["amount"] = amount_decimal
+                                break
+                        except:
+                            continue
             if parsed_data["amount"]:
                 break
         
@@ -123,16 +126,20 @@ def parse_payment_slip(text: str) -> Dict[str, Any]:
         
         # แยกชื่อธนาคาร - เพิ่ม SCB เป็นพิเศษ
         bank_keywords = {
-            'SCB': ['scb', 'uscb', 'ไทยพาณิชย์', 'siam commercial'],
-            'กสิกรไทย': ['กสิกรไทย', 'kbank', 'kasikorn'],
-            'กรุงเทพ': ['กรุงเทพ', 'bbl', 'bangkok bank'],
-            'กรุงไทย': ['กรุงไทย', 'ktb', 'krung thai'],
-            'ทีเอ็มบี': ['ทีเอ็มบี', 'tmb', 'tmbthanachart'],
-            'ธนชาต': ['ธนชาต', 'thanachart'],
-            'ยูโอบี': ['ยูโอบี', 'uob'],
-            'ซีไอเอ็มบี': ['ซีไอเอ็มบี', 'cimb'],
-            'ไอซีบีซี': ['ไอซีบีซี', 'icbc'],
-            'ก.ส.ห.': ['ก.ส.ห.', 'baac', 'bank for agriculture']
+            "กรุงเทพ": ["BBL", "BBLA", "BANGKOK BANK", "ธนาคารกรุงเทพ", "กรุงเทพ"],
+            "กสิกรไทย": ["KBANK", "KASIKORNBANK", "KASI", "KPLUS", "K+", "MAKE", "MAKE by KBank", "ธนาคารกสิกรไทย", "กสิกรไทย", "กสิกร", "ร.กสิกรไทย", "ภ ส ก ร ไท ย"],
+            "ไทยพาณิชย์": ["SCB", "SIAM COMMERCIAL BANK", "ธนาคารไทยพาณิชย์", "ไทยพาณิชย์"],
+            "กรุงไทย": ["KTB", "KRUNGTHAI", "krungthai", "ธนาคารกรุงไทย", "กรุงไทย", "ก ร ง ไท ย"],
+            "ทหารไทยธนชาต": ["TTB", "TMBTHANACHART BANK", "ธนาคารทหารไทยธนชาต", "ทีเอ็มบีธนชาต", "ทหารไทย", "ธนชาต", "TTMB"],
+            "ออมสิน": ["GSB", "GOVERNMENT SAVINGS BANK", "MYMO", "ธนาคารออมสิน", "ออมสิน", "อ อ ม ส น"],
+            "กรุงศรีอยุธยา": ["BAY", "KRUNGSRI", "BANK OF AYUDHYA", "ธนาคารกรุงศรีอยุธยา", "กรุงศรี"],
+            "ธ.ก.ส.": ["BAAC", "ธกส", "ธ.ก.ส."],
+            "ธนาคารอาคารสงเคราะห์": ["GHB", "GH BANK", "ธอส", "ธนาคารอาคารสงเคราะห์"],
+            "CIMB THAI": ["CIMB", "ซีไอเอ็มบีไทย", "ซีไอเอ็มบี"],
+            "UOB": ["UOB", "ยูโอบี"],
+            "TISCO": ["TISCO", "ทิสโก้"],
+            "KIATNAKIN PHATRA": ["KKP", "เกียรตินาคินภัทร"],
+            "ICBC": ["ICBC", "ไอซีบีซี"]
         }
         
         text_lower = text.lower()
@@ -225,7 +232,10 @@ def parse_payment_slip(text: str) -> Dict[str, Any]:
             r'อ้างอิง[:\s]*([A-Za-z0-9]+)',
             r'reference[:\s]*([A-Za-z0-9]+)',
             r'ref[:\s]*([A-Za-z0-9]+)',
-            r'เลขที่[:\s]*([A-Za-z0-9]+)'
+            r'เลขที่[:\s]*([A-Za-z0-9]+)',
+            r'เลขที่รายการ[:\s]*([A-Za-z0-9]+)',
+            r'หมายเลขอ้างอิง[:\s]*([A-Za-z0-9]+)',
+            r'เลขที่อ้างอิง[:\s]*([A-Za-z0-9]+)',
         ]
         
         for pattern in ref_patterns:
@@ -255,6 +265,7 @@ def parse_payment_slip(text: str) -> Dict[str, Any]:
         logger.error(f"Error parsing slip: {str(e)}")
         return {"raw_text": text, "error": str(e)}
 
+# ปริ้นข้อความกลับ line
 def format_slip_summary(data) -> str:
     """
     จัดรูปแบบข้อมูลสลิปเงิน - รองรับทั้ง text และ parsed_data
@@ -285,7 +296,7 @@ def format_slip_summary(data) -> str:
         if parsed_data.get("recipient"):
             summary += f"👥 **ผู้รับ**: {parsed_data['recipient']}\n"
         
-        # จำนวนเงิน
+        # จำนวนเงิน แก้
         if parsed_data.get("amount"):
             amount = parsed_data["amount"]
             try:
@@ -295,6 +306,7 @@ def format_slip_summary(data) -> str:
             except:
                 summary += f"💰 **จำนวนเงิน**: {amount} บาท\n"
         
+                
         # เวลา
         if parsed_data.get("time"):
             summary += f"⏰ **เวลา**: {parsed_data['time']}\n"
@@ -315,16 +327,11 @@ def format_slip_summary(data) -> str:
         if parsed_data.get("account_number"):
             summary += f"💳 **เลขบัญชี**: {parsed_data['account_number']}\n"
         
-        # ข้อความเต็ม
-        raw_text = parsed_data.get('raw_text', text if isinstance(data, str) else 'ไม่มีข้อมูล')
-        summary += f"📝 **ข้อความเต็ม**:\n```\n{raw_text}\n```\n"
+        # # # ข้อความเต็ม เอาออก
+        # raw_text = parsed_data.get('raw_text', text if isinstance(data, str) else 'ไม่มีข้อมูล')
+        # summary += f"📝 **ข้อความเต็ม**:\n```\n{raw_text}\n```\n"
         
-        # สถิติ
-        char_count = len(raw_text)
-        line_count = len(raw_text.split('\n'))
-        summary += f"📝 **จำนวนตัวอักษร:** {char_count} ตัว\n"
-        summary += f"🔤 **จำนวนบรรทัด:** {line_count} บรรทัด"
-        
+       
         return summary
         
     except Exception as e:

@@ -43,7 +43,7 @@ def extract_text_from_image(image_path: str) -> str:
         raise Exception(f"ไม่สามารถอ่านข้อความจากรูปได้: {str(e)}")
 
 
-# ต้องแก้
+# รับข้อมูลจากสลิป (ต้องแก้ไข)
 def parse_payment_slip(text: str) -> Dict[str, Any]:
     """
     แยกข้อมูลสลิปเงินจากข้อความ
@@ -68,7 +68,7 @@ def parse_payment_slip(text: str) -> Dict[str, Any]:
         }
         
         # แยกจำนวนเงิน - ปรับปรุงให้จับได้ดีขึ้น
-        amount_patterns = [r'(?:จำนวนเงิน|Amount)\s([\d,]+.\d{2})', r'([\d,]+.\d{2})\s(?:บาท|BAHT)']
+        amount_patterns = [r'(?:จำนวน|จำนวนเงิน|Amount)\s([\d,]+.\d{2})', r'([\d,]+.\d{2})\s(?:บาท|BAHT|THB)']
         for pattern in amount_patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
@@ -265,7 +265,7 @@ def parse_payment_slip(text: str) -> Dict[str, Any]:
         logger.error(f"Error parsing slip: {str(e)}")
         return {"raw_text": text, "error": str(e)}
 
-# ปริ้นข้อความกลับ line
+# ปริ้นข้อความกลับ line (ต้องแก้ไข)
 def format_slip_summary(data) -> str:
     """
     จัดรูปแบบข้อมูลสลิปเงิน - รองรับทั้ง text และ parsed_data
@@ -338,6 +338,7 @@ def format_slip_summary(data) -> str:
         logger.error(f"Error formatting summary: {str(e)}")
         return f"❌ เกิดข้อผิดพลาดในการจัดรูปแบบ: {str(e)}"
 
+# ไม่ต้องแก้อะไร
 def extract_qr_code(image_path: str) -> Optional[str]:
     """
     แยก QR Code จากรูปภาพ (EasyOCR ไม่รองรับ QR Code โดยตรง)

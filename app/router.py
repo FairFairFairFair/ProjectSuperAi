@@ -10,6 +10,8 @@ from PIL import Image
 import io
 import tempfile
 from .line_utils import LineBot, generate_help_message
+from linebot import LineBotApi
+from linebot.models import TextSendMessage
 
 # เปลี่ยนจาก SlipReader เป็น functions
 from .ocr_utils import extract_text_from_image, parse_payment_slip, format_slip_summary
@@ -97,6 +99,12 @@ def handle_text_message(event):
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=reply_text)
+        )
+        
+        csv_url = "http://127.0.0.1:8000/static/slip_summary.csv"
+        line_bot_api.push_message(
+            event.source.user_id,
+            TextSendMessage(text=f"ดาวน์โหลดไฟล์ csv ได้ที่: {csv_url}")
         )
         
     except Exception as e:

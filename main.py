@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from app.router import webhook_router
 import os
-
+from fastapi.staticfiles import StaticFiles
 # สร้าง FastAPI instance
 app = FastAPI(
     title="AI Chat Assistant QR - LINE Bot",
@@ -12,7 +12,7 @@ app = FastAPI(
 
 # รวม router จาก app/router.py
 app.include_router(webhook_router)
-
+app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 async def root():
     """Health check endpoint - ตรวจสอบว่าระบบทำงานปกติ"""

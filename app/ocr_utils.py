@@ -230,12 +230,12 @@ def parse_payment_slip(text: str) -> Dict[str, Any]:
         ref_patterns = [
             r'รหัสอ้างอิง[:\s]*([A-Za-z0-9]+)',
             r'อ้างอิง[:\s]*([A-Za-z0-9]+)',
-            r'reference[:\s]*([A-Za-z0-9]+)',
-            r'ref[:\s]*([A-Za-z0-9]+)',
             r'เลขที่[:\s]*([A-Za-z0-9]+)',
             r'เลขที่รายการ[:\s]*([A-Za-z0-9]+)',
             r'หมายเลขอ้างอิง[:\s]*([A-Za-z0-9]+)',
             r'เลขที่อ้างอิง[:\s]*([A-Za-z0-9]+)',
+            r'reference[:\s]*([A-Za-z0-9]+)',
+            r'ref[:\s]*([A-Za-z0-9]+)'            
         ]
         
         for pattern in ref_patterns:
@@ -266,7 +266,7 @@ def parse_payment_slip(text: str) -> Dict[str, Any]:
         return {"raw_text": text, "error": str(e)}
 
 # ปริ้นข้อความกลับ line (ต้องแก้ไข)
-def format_slip_summary(data) -> str:
+# def format_slip_summary(data) -> str:
     """
     จัดรูปแบบข้อมูลสลิปเงิน - รองรับทั้ง text และ parsed_data
     
@@ -332,6 +332,98 @@ def format_slip_summary(data) -> str:
         # summary += f"📝 **ข้อความเต็ม**:\n```\n{raw_text}\n```\n"
         
        
+        return summary
+        
+    except Exception as e:
+        logger.error(f"Error formatting summary: {str(e)}")
+        return f"❌ เกิดข้อผิดพลาดในการจัดรูปแบบ: {str(e)}"
+
+def format_slip_summary(data) -> str:
+    """
+    จัดรูปแบบข้อมูลสลิปเงิน - รองรับทั้ง text และ parsed_data
+    และบันทึกข้อมูลลงไฟล์ CSV ด้วย
+
+    Args:
+        data: ข้อความ (str) หรือข้อมูลที่แยกแล้ว (dict)
+        
+    Returns:
+        str: ข้อความสรุปที่จัดรูปแบบแล้ว
+    """
+    import csv
+    import os
+
+    try:
+        # ตรวจสอบว่า input เป็น dict หรือ string
+        if isinstance(data, dict):
+            parsed_data = data
+            text = data.get('raw_text', '')
+        else:
+            # ถ้าเป็น string ให้แยกข้อมูลก่อน
+            text = data
+            parsed_data = parse_payment_slip(text)
+        
+        summary = "📄 **สรุปข้อมูลสลิป**\n"
+        
+        # ผู้โอน
+        if parsed_data.get("sender"):
+            summary += f"👤 **ผู้โอน**: {parsed_data['sender']}\n"
+        # ผู้รับ
+        if parsed_data.get("recipient"):
+            summary += f"👥 **ผู้รับ**: {parsed_data['recipient']}\n"
+        # จำนวนเงิน
+        if parsed_data.get("amount"):
+            amount = parsed_data["amount"]
+            import re
+            match = re.search(r"\d+(?:\.\d+)?", amount.replace(',', ''))
+            if match:
+                try:
+                    amount_num = float(match.group())
+                    summary += f"💰 **จำนวนเงิน**: {amount_num:,.2f} บาท\n"
+                except:
+                    summary += f"💰 **จำนวนเงิน**: {match.group()} บาท\n"
+            else:
+                summary += "💰 **จำนวนเงิน**: ไม่พบข้อมูล\n"
+        # เวลา
+        if parsed_data.get("time"):
+            summary += f"⏰ **เวลา**: {parsed_data['time']}\n"
+        # ธนาคาร
+        if parsed_data.get("bank"):
+            summary += f"🏦 **ธนาคาร**: {parsed_data['bank']}\n"
+        # หมายเลขอ้างอิง
+        if parsed_data.get("reference"):
+            summary += f"🔢 **หมายเลขอ้างอิง**: {parsed_data['reference']}\n"
+        # วันที่
+        if parsed_data.get("date"):
+            summary += f"📅 **วันที่**: {parsed_data['date']}\n"
+        # เลขบัญชี
+        if parsed_data.get("account_number"):
+            summary += f"💳 **เลขบัญชี**: {parsed_data['account_number']}\n"
+        summary += f"💳 **Download CSV file Here **: http://127.0.0.1:8000/static/slip_summary.csv\n"
+
+        # --- เพิ่มส่วนบันทึก CSV ---
+        csv_file = "slip_summary.csv"
+        file_exists = os.path.isfile(csv_file)
+        fieldnames = [
+            "sender", "recipient", "amount", "time", "bank",
+            "reference", "date", "account_number", "raw_text"
+        ]
+        with open("static/slip_summary.csv", "w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow({
+                "sender": parsed_data.get("sender", ""),
+                "recipient": parsed_data.get("recipient", ""),
+                "amount": parsed_data.get("amount", ""),
+                "time": parsed_data.get("time", ""),
+                "bank": parsed_data.get("bank", ""),
+                "reference": parsed_data.get("reference", ""),
+                "date": parsed_data.get("date", ""),
+                "account_number": parsed_data.get("account_number", ""),
+                "raw_text": parsed_data.get("raw_text", text if isinstance(data, str) else "")
+            })
+        # --- จบส่วนบันทึก CSV ---
+
         return summary
         
     except Exception as e:

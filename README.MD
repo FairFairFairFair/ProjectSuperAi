@@ -14,11 +14,15 @@ venv\Scripts\activate
 
 # ติดตั้ง library ตามลำดับเลยครับ
 pip install -r requirements.txt
+
 pip install "Pillow<10.0.0"
+
 pip install gspread google-auth
 
 # น้ำ key api จาก Line Developers มาใส่ในไฟล์ .env
+
 key ของ LINE_CHANNEL_ACCESS_TOKEN
+
 key ของ LINE_CHANNEL_SECRET
 
 # Run main.py ใน terminal
@@ -32,11 +36,14 @@ https://shlm2sdr-8000.asse.devtunnels.ms/
 
 # ใส่ในหมวด Messaging API ตรง Webhook URL
 อันที่เอาไปใส่
+
 https://shlm2sdr-8000.asse.devtunnels.ms/webhook
+
 กด verify ใน line developers ด้วย
 
 # ของ google sheets
 เอา api มาจาก google cloud service
+
 enable ของ google drive api กับ google sheets api ด้วยนะ
 
 # ได้ไฟล์ json แล้ว
@@ -44,4 +51,5 @@ enable ของ google drive api กับ google sheets api ด้วยนะ
 
 # แก้ชื่อให้ตรงกับ sheets ที่ต้องการเพิ่มข้อมูลด้วย
 อยุ่ในไฟล์ ocr_utils.py
+
 spreadsheet = gc.open("ชื่อ ไฟล์ Google Sheets")

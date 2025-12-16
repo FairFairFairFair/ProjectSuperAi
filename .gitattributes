@@ -1,0 +1,13 @@
+# ทำให้ไฟล์ text ทุกไฟล์ใช้ LF
+* text=auto
+
+# บังคับให้ไฟล์ทั้งหมดใช้ LF
+* text eol=lf
+
+# ถ้าต้องการให้ไฟล์บางประเภทใช้ CRLF (เช่น .bat สำหรับ Windows)
+*.bat text eol=crlf
+
+# ถ้าต้องการให้ไฟล์ binary ไม่ถูกแปลง line endings
+*.png binary
+*.jpg binary
+*.exe binary

@@ -7,11 +7,33 @@ import os
 import json
 from PIL import Image, ImageFilter, ImageOps
 import numpy as np
+import gspread
+from google.oauth2.service_account import Credentials
 
 # --- การตั้งค่า Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 Image.ANTIALIAS = Image.Resampling.LANCZOS
+# กำหนด SCOPES
+SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive'
+]
+
+# โหลด credentials
+creds = Credentials.from_service_account_file('credentials.json', scopes=SCOPES)
+
+# เชื่อมต่อ Google Sheets
+gc = gspread.authorize(creds)
+
+# เปิดชีทด้วยชื่อหรือ id
+spreadsheet = gc.open("AI_Project")  # หรือ gc.open_by_key('sheet_id')
+worksheet = spreadsheet.sheet1
+
+header = [
+    "sender", "recipient", "amount", "time", "bank",
+    "reference", "date", "account_number", "Date_Send"
+]
 
 # --- การโหลดโมเดล EasyOCR ---
 try:
@@ -425,6 +447,22 @@ def format_slip_summary(data: Dict[str, Any]) -> str:
     summary.append(f"\n📝 ข้อความเต็มจากสลิป:\n``````")
     summary.append("\n" + "-" * 30)
     summary.append(f"(สร้างเมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')})")
+    summary.append("Google Sheets : https://docs.google.com/spreadsheets/d/1vtXziOxGKh4vJkTdCvpnbHzcVRoxCjoHV_A7aEMIOpE/edit?gid=0#gid=0")
+    
+    if worksheet.row_count == 0 or worksheet.row_values(1) != header:
+            worksheet.insert_row(header, 1)
+
+    worksheet.append_row([
+            data.get("sender", ""),
+            data.get("recipient", ""),
+            data.get("amount", ""),
+            data.get("time", ""),
+            data.get("bank", ""),
+            data.get("reference", ""),
+            data.get("date", ""),
+            data.get("account_number", ""),
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ])
     return "\n".join(summary)
 
 # --- ส่วนการทำงานหลักของโปรแกรม ---

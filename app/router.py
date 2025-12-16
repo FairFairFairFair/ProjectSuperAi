@@ -10,6 +10,8 @@ from PIL import Image
 import io
 import tempfile
 from .line_utils import LineBot, generate_help_message
+from linebot import LineBotApi
+from linebot.models import TextSendMessage
 
 # เปลี่ยนจาก SlipReader เป็น functions
 from .ocr_utils import extract_text_from_image, parse_payment_slip, format_slip_summary
